@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from models.order import Order
+    from models.stock import Stock
 
 class WarehouseTypeEnum(Enum):
     CENTRAL = "CENTRAL"
@@ -37,6 +38,11 @@ class Warehouse(Base):
     )
 
 
+    stocks: Mapped[list["Stock"]] = relationship("Stock", 
+        back_populates="warehouse",
+        default_factory=list,
+        init=False
+    )
 
     orders: Mapped[list["Order"]] = relationship("Order",
         back_populates="warehouse",

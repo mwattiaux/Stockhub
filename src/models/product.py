@@ -2,6 +2,12 @@ from database.database import Base
 from decimal import Decimal
 from sqlalchemy import CheckConstraint, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from models.stock import Stock
+
+    
     
 class Product(Base):
     __tablename__ = "products"
@@ -30,6 +36,14 @@ class Product(Base):
         Numeric(4, 2), 
         nullable=False, 
         default=21.00
+    )
+
+
+
+    stocks: Mapped[list["Stock"]] = relationship("Stock", 
+        back_populates="product",
+        default_factory=list,
+        init=False
     )
 
 
