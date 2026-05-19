@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from models.customer import Customer
+    from models.order_line import Order_line
     from models.warehouse import Warehouse
     
 
@@ -48,6 +49,13 @@ class Order(Base):
     customer: Mapped["Customer"] = relationship("Customer",
         back_populates="orders",
         default=None,
+        init=False
+    )
+
+    order_lines: Mapped[list["Order_line"]] = relationship("Order_line",
+        back_populates="order",
+        cascade="all, delete-orphan",
+        default_factory=list,
         init=False
     )
 

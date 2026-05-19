@@ -5,9 +5,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from models.order_line import Order_line
     from models.stock import Stock
 
-    
+
     
 class Product(Base):
     __tablename__ = "products"
@@ -39,6 +40,11 @@ class Product(Base):
     )
 
 
+    order_lines: Mapped[list["Order_line"]] = relationship("Order_line",
+        back_populates="product",
+        default_factory=list,
+        init=False
+    )  
 
     stocks: Mapped[list["Stock"]] = relationship("Stock", 
         back_populates="product",
