@@ -2,11 +2,15 @@ from database.database import Base
 from enum import Enum
 from sqlalchemy import CheckConstraint, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from models.order import Order
 
 class WarehouseTypeEnum(Enum):
-    CENTRAL = "Central"
-    PROXIMITY = "Proximity"
-    HUB = "Hub"
+    CENTRAL = "CENTRAL"
+    PROXIMITY = "PROXIMITY"
+    HUB = "HUB"
 
 class Warehouse(Base):
     __tablename__ = "warehouses"
@@ -30,6 +34,14 @@ class Warehouse(Base):
 
     max_capacity: Mapped[int] = mapped_column(Integer, 
         nullable=False
+    )
+
+
+
+    orders: Mapped[list["Order"]] = relationship("Order",
+        back_populates="warehouse",
+        default_factory=list,
+        init=False
     )
 
 
