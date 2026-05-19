@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from models.customer import Customer
+    from models.invoice import Invoice
     from models.order_line import Order_line
     from models.warehouse import Warehouse
     
@@ -48,6 +49,12 @@ class Order(Base):
 
     customer: Mapped["Customer"] = relationship("Customer",
         back_populates="orders",
+        default=None,
+        init=False
+    )
+
+    invoice: Mapped["Invoice"] = relationship("Invoice",
+        back_populates="order",
         default=None,
         init=False
     )
