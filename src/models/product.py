@@ -1,15 +1,29 @@
+# Register a Product
+# A product consists of:
+
+# SKU (Unique reference, e.g., IPH-16-BLK)
+# Name
+# Unit Price Ex-VAT (Before taxes)
+# Default VAT Rate
+# Business Rules:
+
+# The unit price ex-VAT must be strictly greater than 0.
+# The default VAT rate is set to 21.00% by default (Belgian Standard).
+
 from database.database import Base
 from decimal import Decimal
 from sqlalchemy import CheckConstraint, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from models.order_line import Order_line
     from models.stock import Stock
-
-
+    from models.stock_movement import Stock_movement
     
+
+
 class Product(Base):
     __tablename__ = "products"
 
@@ -40,6 +54,7 @@ class Product(Base):
     )
 
 
+
     order_lines: Mapped[list["Order_line"]] = relationship("Order_line",
         back_populates="product",
         default_factory=list,
@@ -52,9 +67,14 @@ class Product(Base):
         init=False
     )
 
+    stock_movements: Mapped[list["Stock_movement"]] = relationship("Stock_movement", 
+        back_populates="product",
+        default_factory=list,
+        init=False
+    )
+
 
 
     __table_args__ = (
         CheckConstraint('unit_price_ex_vat > 0', name='check_unit_price_positive'),
-        CheckConstraint('default_vat_rate >= 0', name='check_vat_rate_non_negative'),
     )
