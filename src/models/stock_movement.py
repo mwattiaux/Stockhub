@@ -27,15 +27,7 @@ class Stock_movement(Base):
     product_id : Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="RESTRICT"), 
         nullable=False
     )
-
-    src_warehouse_id: Mapped[int | None] = mapped_column(ForeignKey("warehouses.id", ondelete="RESTRICT"), 
-        nullable=True
-    )
-
-    dest_warehouse_id: Mapped[int | None] = mapped_column(ForeignKey("warehouses.id", ondelete="RESTRICT"), 
-        nullable=True
-    )
-
+    
     quantity: Mapped[int] = mapped_column(Integer, 
         nullable=False
     )
@@ -44,8 +36,19 @@ class Stock_movement(Base):
         nullable=False
     )
 
+    src_warehouse_id: Mapped[int | None] = mapped_column(ForeignKey("warehouses.id", ondelete="RESTRICT"), 
+        nullable=True,
+        default=None
+    )
+
+    dest_warehouse_id: Mapped[int | None] = mapped_column(ForeignKey("warehouses.id", ondelete="RESTRICT"), 
+        nullable=True,
+        default=None
+    )
+
     reason: Mapped[str] = mapped_column(String(255),
-        nullable=True
+        nullable=True,
+        default=None
     )
 
     movement_date: Mapped[datetime] = mapped_column(DateTime, 
@@ -58,7 +61,6 @@ class Stock_movement(Base):
 
     product: Mapped["Product"] = relationship("Product", 
         back_populates="stock_movements",
-        default=None,
         init=False
     )
 

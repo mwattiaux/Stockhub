@@ -37,13 +37,11 @@ class Order_line(Base):
 
     order: Mapped["Order"] = relationship("Order",
         back_populates="order_lines",
-        default=None,
         init=False
     )
 
     product: Mapped["Product"] = relationship("Product",
         back_populates="order_lines",
-        default=None,
         init=False
     )
 

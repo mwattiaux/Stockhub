@@ -49,7 +49,6 @@ class Order(Base):
 
     customer: Mapped["Customer"] = relationship("Customer",
         back_populates="orders",
-        default=None,
         init=False
     )
 
@@ -68,6 +67,5 @@ class Order(Base):
 
     warehouse: Mapped["Warehouse"] = relationship("Warehouse",
         back_populates="orders",
-        default=None,
         init=False  
     )

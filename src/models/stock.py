@@ -29,13 +29,11 @@ class Stock(Base):
 
     product: Mapped["Product"] = relationship("Product", 
         back_populates="stocks",
-        default=None,
         init=False
     )
 
     warehouse: Mapped["Warehouse"] = relationship("Warehouse", 
         back_populates="stocks",
-        default=None,
         init=False 
     )
 

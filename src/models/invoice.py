@@ -54,6 +54,5 @@ class Invoice(Base):
 
     order: Mapped["Order"] = relationship("Order",
         back_populates="invoice",
-        default=None,
         init=False
     )
