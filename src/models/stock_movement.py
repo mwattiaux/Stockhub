@@ -1,7 +1,7 @@
 from database.database import Base
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import CheckConstraint, DateTime, Enum as SQLEnum, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 
-class movement_type_enum(Enum):
+class MovementTypeEnum(Enum):
     SALE = "SALE"
     TRANSFER = "TRANSFER"
     SUPPLIER_RECEPTION = "SUPPLIER_RECEPTION"
@@ -40,7 +40,7 @@ class Stock_movement(Base):
         nullable=False
     )
 
-    movement_type: Mapped[movement_type_enum] = mapped_column(Enum(movement_type_enum, name="stock_movement_type_enum"),
+    movement_type: Mapped[MovementTypeEnum] = mapped_column(SQLEnum(MovementTypeEnum, name="stock_movement_type_enum"),
         nullable=False
     )
 

@@ -1,7 +1,7 @@
 from database.database import Base
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, Enum as SQLEnum, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 
@@ -40,7 +40,7 @@ class Order(Base):
         init=False
     )
 
-    status: Mapped[OrderStatusEnum] = mapped_column(name="order_status_enum",
+    status: Mapped[OrderStatusEnum] = mapped_column(SQLEnum(OrderStatusEnum, name="order_status_enum"),
         default=OrderStatusEnum.DRAFT,
         nullable=False
     )
