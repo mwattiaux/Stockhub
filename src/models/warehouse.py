@@ -68,6 +68,7 @@ class Warehouse(Base):
 
     stocks: Mapped[list["Stock"]] = relationship("Stock", 
         back_populates="warehouse",
+        cascade="all, delete-orphan",
         default_factory=list,
         init=False
     )
