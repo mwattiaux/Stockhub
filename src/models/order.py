@@ -27,11 +27,11 @@ class Order(Base):
     )
 
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id", ondelete="RESTRICT"),
-        nullable=False
+        nullable=False,
     )
 
     warehouse_id: Mapped[int] = mapped_column(ForeignKey("warehouses.id", ondelete="RESTRICT"),
-        nullable=False
+        nullable=False,
     )
 
     order_date: Mapped[datetime] = mapped_column(DateTime,

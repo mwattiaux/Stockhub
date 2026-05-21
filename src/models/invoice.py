@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 
-class invoice_status_enum(Enum):
+class InvoiceStatusEnum(Enum):
     PENDING_PAYMENT = "PENDING_PAYMENT"
     VALIDATED = "VALIDATED"
 
@@ -39,8 +39,8 @@ class Invoice(Base):
         nullable=False
     )
 
-    status: Mapped[invoice_status_enum] = mapped_column(name="invoice_status_enum",
-        default=invoice_status_enum.PENDING_PAYMENT,
+    status: Mapped[InvoiceStatusEnum] = mapped_column(name="invoice_status_enum",
+        default=InvoiceStatusEnum.PENDING_PAYMENT,
         nullable=False
     )
 
