@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 # Models imports
 from models.customer import Customer
-from models.warehouse import Warehouse
+from models.warehouse import Warehouse, WarehouseTypeEnum  # <--- Ajout de WarehouseTypeEnum ici
 from models.product import Product
 from models.order import Order, OrderStatusEnum
 from models.invoice import Invoice, InvoiceStatusEnum
@@ -46,7 +46,7 @@ def sample_warehouse(db_session):
     w = Warehouse(
         name="Central Hub", 
         city="Namur", 
-        warehouse_type="Hub", 
+        warehouse_type=WarehouseTypeEnum.HUB,  # <--- CORRECTION: Chaîne "Hub" remplacée par l'Enum
         max_capacity=100
     )
     db_session.add(w)
@@ -175,7 +175,7 @@ def test_warehouse_creation(db_session):
     w = Warehouse(
         name="Logistics One", 
         city="Liege", 
-        warehouse_type="Central", 
+        warehouse_type=WarehouseTypeEnum.CENTRAL,  # <--- CORRECTION: "Central" -> WarehouseTypeEnum.CENTRAL
         max_capacity=500
     )
     db_session.add(w)
@@ -191,7 +191,7 @@ def test_warehouse_capacity_must_be_positive(db_session):
     w = Warehouse(
         name="Invalid Capacity WH", 
         city="Mons", 
-        warehouse_type="Proximity", 
+        warehouse_type=WarehouseTypeEnum.PROXIMITY,  # <--- CORRECTION: "Proximity" -> WarehouseTypeEnum.PROXIMITY
         max_capacity=0
     )
     db_session.add(w)
@@ -206,7 +206,7 @@ def test_warehouse_unique_name(db_session, sample_warehouse):
     w2 = Warehouse(
         name="Central Hub", 
         city="Charleroi", 
-        warehouse_type="Hub", 
+        warehouse_type=WarehouseTypeEnum.HUB,  # <--- CORRECTION: "Hub" -> WarehouseTypeEnum.HUB
         max_capacity=200
     )
     db_session.add(w2)
