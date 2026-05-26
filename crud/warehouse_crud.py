@@ -7,8 +7,7 @@ def create_warehouse(session: Session, name: str, city: str, warehouse_type: War
     warehouse = Warehouse(name = name, city = city, warehouse_type = warehouse_type, max_capacity = max_capacity)
     
     session.add(warehouse)
-    session.commit()
-    session.refresh(warehouse)
+    session.flush()
     
     return warehouse
 
@@ -30,6 +29,19 @@ def get_all_warehouses(session: Session) -> list[Warehouse]:
     
     return warehouses
 
+def get_warehouses_filtered(session: Session, city: str | None = None, warehouse_type: WarehouseTypeEnum | None = None) -> list[Warehouse]:
+    stmt = select(Warehouse)
+    
+    if city is not None:
+        stmt = stmt.where(Warehouse.city == city)
+        
+    if warehouse_type is not None:
+        stmt = stmt.where(Warehouse.warehouse_type == warehouse_type)
+    
+    warehouses = session.execute(stmt).scalars().all()
+    
+    return warehouses
+
 def update_warehouse(session: Session, warehouse_id: int, **kwargs) -> Warehouse:
     stmt = select(Warehouse).where(Warehouse.id == warehouse_id)
     warehouse = session.execute(stmt).scalar_one_or_none()
@@ -41,8 +53,7 @@ def update_warehouse(session: Session, warehouse_id: int, **kwargs) -> Warehouse
         if hasattr(warehouse, key) and value is not None:
             setattr(warehouse, key, value)
             
-    session.commit()
-    session.refresh(warehouse)
+    session.flush()
     
     return warehouse
 

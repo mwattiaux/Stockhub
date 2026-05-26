@@ -1,33 +1,23 @@
 from models.stock_movement import MovementTypeEnum, Stock_movement
-from sqlalchemy import select
+from sqlalchemy import insert, select
 from sqlalchemy.orm import Session
 
 
 
-def create_stock_movement(
-    session: Session, 
-    product_id: int, 
-    src_warehouse_id: int | None,  # <-- Corrigé : peut être None si entrée fournisseur
-    dest_warehouse_id: int | None, # <-- Corrigé : peut être None si sortie client
-    quantity: int, 
-    movement_type: MovementTypeEnum, # <-- Corrigé : utilise la classe Enum comme type de sécurité
-    reason: str | None
-) -> Stock_movement:
-    
-    stock_movement = Stock_movement(
-        product_id=product_id, 
-        src_warehouse_id=src_warehouse_id, 
-        dest_warehouse_id=dest_warehouse_id, 
-        quantity=quantity, 
-        movement_type=movement_type, # <-- Corrigé : on passe l'argument reçu, pas la classe globale
+def create_stock_movement(session, product_id, src_warehouse_id, dest_warehouse_id, quantity, movement_type, reason):
+    # Utilisation de la syntaxe insert() au lieu du constructeur d'objet
+    stmt = insert(Stock_movement).values(
+        product_id=product_id,
+        src_warehouse_id=src_warehouse_id,
+        dest_warehouse_id=dest_warehouse_id,
+        quantity=quantity,
+        movement_type=movement_type,
         reason=reason
     )
-
-    session.add(stock_movement)
-    session.commit()
-    session.refresh(stock_movement)
     
-    return stock_movement
+    result = session.execute(stmt)
+    session.flush()
+    return result
 
 def get_stock_movement_by_id(session: Session, stock_movement_id: int) -> Stock_movement | None:
     stmt = select(Stock_movement).where(Stock_movement.id == stock_movement_id)

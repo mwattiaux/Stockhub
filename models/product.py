@@ -1,15 +1,3 @@
-# Register a Product
-# A product consists of:
-
-# SKU (Unique reference, e.g., IPH-16-BLK)
-# Name
-# Unit Price Ex-VAT (Before taxes)
-# Default VAT Rate
-# Business Rules:
-
-# The unit price ex-VAT must be strictly greater than 0.
-# The default VAT rate is set to 21.00% by default (Belgian Standard).
-
 from database.database import Base
 from decimal import Decimal
 from sqlalchemy import CheckConstraint, Numeric, String
@@ -17,10 +5,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 
 
-if TYPE_CHECKING:
-    from models.order_line import Order_line
-    from models.stock import Stock
-    from models.stock_movement import Stock_movement
+# if TYPE_CHECKING:
+# from models.order_line import Order_line
+# from models.stock import Stock
+# from models.stock_movement import Stock_movement
     
 
 

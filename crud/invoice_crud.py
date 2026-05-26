@@ -9,8 +9,7 @@ def create_invoice(session: Session, order_id: int, total_ex_vat: Decimal, vat_a
     invoice = Invoice(order_id=order_id, total_ex_vat=total_ex_vat, vat_amount=vat_amount, total_inc_vat=total_inc_vat, status=status)
     
     session.add(invoice)
-    session.commit()
-    session.refresh(invoice)
+    session.flush()
     
     return invoice
 

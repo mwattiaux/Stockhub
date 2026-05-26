@@ -10,8 +10,7 @@ def create_product(session: Session, sku: str, name: str, unit_price_ex_vat: Dec
     product = Product(sku=sku, name=name, unit_price_ex_vat=unit_price_ex_vat, default_vat_rate=default_vat_rate)
     
     session.add(product)
-    session.commit()
-    session.refresh(product)
+    session.flush()
     
     return product
 
@@ -33,6 +32,22 @@ def get_all_products(session: Session) -> List[Product]:
     
     return products
 
+def get_products_filtered(session: Session, name: str | None = None, min_price: Decimal | None = None, max_price: Decimal | None = None) -> List[Product]:
+    stmt = select(Product)
+    
+    if name is not None:
+        stmt = stmt.where(Product.name.ilike(f"%{name}%"))
+        
+    if min_price is not None:
+        stmt = stmt.where(Product.unit_price_ex_vat >= min_price)
+        
+    if max_price is not None:
+        stmt = stmt.where(Product.unit_price_ex_vat <= max_price)
+    
+    products = session.execute(stmt).scalars().all()
+    
+    return products
+
 def update_product(session: Session, product_id: int, **kwargs) -> Product:
     stmt = select(Product).where(Product.id == product_id)
     product = session.execute(stmt).scalar_one_or_none()
@@ -44,8 +59,7 @@ def update_product(session: Session, product_id: int, **kwargs) -> Product:
         if hasattr(product, key) and value is not None:
             setattr(product, key, value)
             
-    session.commit()
-    session.refresh(product)
+    session.flush()
     
     return product
 

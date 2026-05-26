@@ -1,5 +1,7 @@
 from decimal import Decimal
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
+from weasyprint import HTML
 from models.order import Order, OrderStatusEnum
 from models.invoice import Invoice, InvoiceStatusEnum
 from models.stock_movement import MovementTypeEnum
@@ -11,123 +13,102 @@ from crud.stock_crud import get_stock_by_warehouse_id_product_id, update_stock_q
 from crud.invoice_crud import create_invoice
 from crud.stock_movement_crud import create_stock_movement
 
+# ==========================================
+# ORDER BUSINESS LOGIC
+# ==========================================
+
 def add_product_to_order(session: Session, order_id: int, product_id: int, quantity: int, price: Decimal):
-    """
-    Business Logic: Inserts commercial cart items into an order.
-    Enforces state immutability patterns dictated by sales workflows.
-    """
     order = get_order_by_id(session, order_id)
     if not order:
         raise ValueError("Business Logic Error: Order not found.")
-        
-    # Business Rule (Modification Condition): Orders can only be altered if status is 'Draft'
     if order.status != OrderStatusEnum.DRAFT:
-        raise ValueError("Business Logic Error: Orders can only be modified or deleted if their status is 'Draft'.")
-        
+        raise ValueError("Business Logic Error: Orders can only be modified if status is 'Draft'.")
     if quantity <= 0:
         raise ValueError("Business Logic Error: Ordered quantity must be strictly positive.")
-        
-    return create_order_line(session, order_id=order.id, product_id=product_id, quantity=quantity, price=price)
+    
+    try:
+        line = create_order_line(session, order_id=order.id, product_id=product_id, quantity=quantity, price=price)
+        session.commit()
+        return line
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise RuntimeError(f"Database error while adding product to order: {e}")
 
-# def modify_order_metadata(session: Session, order_id: int, customer_id: int | None = None, warehouse_id: int | None = None) -> Order:
-#     """
-#     Business Logic: Updates core order structural properties (Customer or Fulfillment Center).
-#     Guards workflow safety constraints during order preparation.
-#     """
-#     order = get_order_by_id(session, order_id)
-#     if not order:
-#         raise ValueError("Business Logic Error: Order not found.")
+def submit_order_for_review(session: Session, order_id: int):
+    """
+    Passe le statut d'une commande de DRAFT à PENDING_REVIEW.
+    """
+    order = get_order_by_id(session, order_id)
+    
+    if not order:
+        raise ValueError("Business Logic Error: Order not found.")
+    if order.status != OrderStatusEnum.DRAFT:
+        raise ValueError("Business Logic Error: Only Draft orders can be submitted.")
+    if not order.order_lines:
+        raise ValueError("Business Logic Error: Cannot submit an empty order.")
 
-#     # Business Rule (Modification Condition): Protect workflow immutability boundaries
-#     if order.status != OrderStatusEnum.DRAFT:
-#         raise ValueError("Business Logic Error: Order structural properties are immutable once validated or cancelled.")
-
-#     return update_order(
-#         session=session,
-#         order_id=order_id,
-#         customer_id=customer_id,
-#         warehouse_id=warehouse_id
-#     )
+    try:
+        update_order_status(session, order.id, OrderStatusEnum.PENDING_REVIEW)
+        session.commit()
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise RuntimeError(f"Database error while submitting order: {e}")
 
 def validate_and_finalize_order(session: Session, order_id: int):
-    """
-    Business Logic: The engine room of sales finalization. Orchestrates order checkout workflows:
-    1. Validates strict logistical routing bans.
-    2. Runs cross-entity physical inventory availability lockdowns.
-    3. Triggers atomic data updates (Order locking, material release, financial invoicing).
-    """
+    # 1. Validation métier (sans interaction DB persistante ici)
     order = get_order_by_id(session, order_id)
     if not order:
         raise ValueError("Business Logic Error: Order not found.")
-        
-    if order.status != OrderStatusEnum.DRAFT:
-        raise ValueError("Business Logic Error: Order has already traveled out of modification bounds.")
-        
+    if order.status != OrderStatusEnum.PENDING_REVIEW:
+        raise ValueError("Business Logic Error: Order is not in Pending Review status.")
     if not order.order_lines:
         raise ValueError("Business Logic Error: Cannot finalize an order lacking itemized lines.")
-
-    # 1. Blocking Condition (Logistics Restriction): Central warehouses are banned from direct customer shipments
     if order.warehouse.warehouse_type == WarehouseTypeEnum.CENTRAL:
-        raise ValueError("Business Logic Error: A warehouse typed as 'Central' cannot directly ship an order to a customer.")
+        raise ValueError("Business Logic Error: A 'Central' warehouse cannot ship directly to customers.")
 
-    # 2. Blocking Condition (Stock Availability): Verify physical balance levels across the cart
+    # 2. Vérification de stock
     allocations = []
     for line in order.order_lines:
-        product = line.product # ORM multi-table traversal
-        stock = get_stock_by_warehouse_id_product_id(session, order.warehouse_id, product.id)
-        
+        stock = get_stock_by_warehouse_id_product_id(session, order.warehouse_id, line.product_id)
         if not stock or stock.quantity < line.quantity:
-            available = stock.quantity if stock else 0
-            raise ValueError(
-                f"Business Logic Error: Insufficient stock for '{product.name}' in fulfillment center '{order.warehouse.name}' "
-                f"(Requested: {line.quantity}, Available physical balance: {available})."
-            )
-        # Stage mutation variables for safe execution post-validation
+            raise ValueError(f"Business Logic Error: Insufficient stock for '{line.product.name}'.")
         allocations.append((stock, stock.quantity - line.quantity, line))
 
-    # 3. Business Logic (Financial Calculations): Tabulate legal invoicing ledgers via high-precision decimals
-    total_ex_vat = Decimal("0.00")
-    vat_amount = Decimal("0.00")
-    
-    for line in order.order_lines:
-        line_ex_vat = line.historical_price_ex_vat * Decimal(line.quantity)
-        line_vat = line_ex_vat * (line.product.default_vat_rate / Decimal("100.00"))
-        
-        total_ex_vat += line_ex_vat
-        vat_amount += line_vat
-        
+    # 3. Calculs financiers
+    total_ex_vat = sum(line.historical_price_ex_vat * Decimal(line.quantity) for line in order.order_lines)
+    vat_amount = sum((line.historical_price_ex_vat * Decimal(line.quantity)) * (line.product.default_vat_rate / Decimal("100.00")) for line in order.order_lines)
     total_inc_vat = total_ex_vat + vat_amount
 
-    # 4. Atomic Mutation Phase (Process execution state changes)
-    # A. Lock the Order state (Status transitions legally binding and immutable)
-    update_order_status(session, order.id, OrderStatusEnum.VALIDATED)
-    
-    # B. Discharge physical stock balances & generate immutable history audit trail entries
-    for stock_obj, new_qty, line in allocations:
-        update_stock_quantity(session, order.warehouse_id, line.product_id, new_qty)
+    # 4. Atomic Mutation Phase (Transaction sécurisée)
+    try:
+        update_order_status(session, order.id, OrderStatusEnum.VALIDATED)
         
-        # Log allocation movement (Destination warehouse is NULL because it represents a direct customer sale)
-        create_stock_movement(
+        for stock_obj, new_qty, line in allocations:
+            update_stock_quantity(session, order.warehouse_id, line.product_id, new_qty)
+            create_stock_movement(
+                session=session,
+                product_id=line.product_id,
+                src_warehouse_id=order.warehouse_id,
+                dest_warehouse_id=None,
+                quantity=line.quantity,
+                movement_type=MovementTypeEnum.SALE,
+                reason=f"Order #{order.id} Dispatch Validation"
+            )
+
+        invoice = create_invoice(
             session=session,
-            product_id=line.product_id,
-            src_warehouse_id=order.warehouse_id,
-            dest_warehouse_id=None,
-            quantity=line.quantity,
-            movement_type=MovementTypeEnum.SALE,
-            reason=f"Order #{order.id} Dispatch Validation"
+            order_id=order.id,
+            total_ex_vat=total_ex_vat,
+            vat_amount=vat_amount,
+            total_inc_vat=total_inc_vat,
+            status=InvoiceStatusEnum.PENDING_PAYMENT
         )
-
-    # C. Financial Flow Automation: Automatically generate associated accounting Invoice (1-to-1 relationship)
-    invoice = create_invoice(
-        session=session,
-        order_id=order.id,
-        total_ex_vat=total_ex_vat,
-        vat_amount=vat_amount,
-        total_inc_vat=total_inc_vat,
-        status=InvoiceStatusEnum.PENDING_PAYMENT # Invoiced workflow sets status initialization to "Pending Payment"
-    )
-
-    return invoice
+        
+        session.commit()
+        return invoice
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise RuntimeError(f"Database error during order finalization: {e}")
 
 def generate_invoice_html(invoice: Invoice) -> str:
     """
@@ -236,3 +217,16 @@ def generate_invoice_html(invoice: Invoice) -> str:
     </div>
     """
     return html_template
+
+def generate_invoice_pdf(invoice) -> bytes:
+    """
+    Generates a professional PDF document from the HTML invoice template.
+    Returns the binary data of the PDF.
+    """
+    # Reuse your existing HTML generation logic
+    html_content = generate_invoice_html(invoice)
+    
+    # Render the HTML to a PDF binary stream
+    return HTML(string=html_content).write_pdf()
+
+# (Note: generate_invoice_html reste une fonction utilitaire pure, pas besoin de try/except/rollback ici)

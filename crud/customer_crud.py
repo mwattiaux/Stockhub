@@ -8,8 +8,7 @@ def create_customer(session: Session, first_name: str, last_name: str, address: 
     customer = Customer(first_name=first_name, last_name=last_name, address=address, email=email)
     
     session.add(customer)
-    session.commit()
-    session.refresh(customer)
+    session.flush()
     
     return customer
 
@@ -41,6 +40,22 @@ def get_all_customers(session: Session) -> list[Customer]:
     
     return customers
 
+def get_customers_filtered(session: Session, first_name: str | None = None, last_name: str | None = None, email: str | None = None) -> list[Customer]:
+    stmt = select(Customer)
+    
+    if first_name is not None:
+        stmt = stmt.where(Customer.first_name.ilike(f"%{first_name}%"))
+        
+    if last_name is not None:
+        stmt = stmt.where(Customer.last_name.ilike(f"%{last_name}%"))
+        
+    if email is not None:
+        stmt = stmt.where(Customer.email.ilike(f"%{email}%"))
+    
+    customers = session.execute(stmt).scalars().all()
+    
+    return customers
+
 def update_customer(session: Session, customer_id: int, **kwargs) -> Customer:
     stmt = select(Customer).where(Customer.id == customer_id)
     customer = session.execute(stmt).scalar_one_or_none()
@@ -52,8 +67,7 @@ def update_customer(session: Session, customer_id: int, **kwargs) -> Customer:
         if hasattr(customer, key) and value is not None:
             setattr(customer, key, value)
             
-    session.commit()
-    session.refresh(customer)
+    session.flush()
     
     return customer
 

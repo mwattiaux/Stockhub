@@ -49,8 +49,7 @@ def update_order_status(session: Session, order_id: int, new_status: OrderStatus
         raise ValueError("Order not found in the database.")
     
     order.status = new_status
-    session.commit()
-    session.refresh(order)
+    session.flush()
     
     return order
 

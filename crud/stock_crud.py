@@ -8,8 +8,7 @@ def create_stock(session: Session, product_id: int, warehouse_id: int, quantity:
     stock = Stock(product_id=product_id, warehouse_id=warehouse_id, quantity=quantity)
     
     session.add(stock)
-    session.commit()
-    session.refresh(stock)
+    session.flush()
     
     return stock
 
@@ -33,7 +32,6 @@ def update_stock_quantity(session: Session, warehouse_id: int, product_id: int, 
         raise ValueError("Stock not found in the database.")
     
     stock.quantity = quantity
-    session.commit()
-    session.refresh(stock)
+    session.flush()
     
     return stock

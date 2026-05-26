@@ -9,9 +9,7 @@ def create_order_line(session: Session, order_id: int, product_id: int, quantity
     order_line = Order_line(order_id=order_id, product_id=product_id, quantity=quantity, historical_price_ex_vat=price)
     
     session.add(order_line)
-    session.commit()
-    session.refresh(order_line)
-    
+    session.flush()
     return order_line
 
 def get_order_line_by_id(session: Session, order_line_id: int) -> Order_line | None:
